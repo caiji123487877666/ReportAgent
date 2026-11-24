@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Report Agent 竞品情报与研究报告生成工具">
+  <title>Report Agent · 竞品研报生成</title>
+  <style>
+    :root {
+      --ink: #172033;
+      --muted: #667085;
+      --line: #e5e9f2;
+      --surface: #ffffff;
+      --background: #f5f7fb;
+      --primary: #5b55d6;
+      --primary-dark: #4640b8;
+      --primary-soft: #eeedff;
+      --success: #138a72;
+      --danger: #c34242;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 8% 2%, rgba(91, 85, 214, 0.10), transparent 28rem),
+        radial-gradient(circle at 94% 18%, rgba(19, 138, 114, 0.08), transparent 24rem),
+        var(--background);
+      font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; }
+    [hidden] { display: none !important; }
+
+    .shell {
+      width: min(1160px, calc(100% - 40px));
+      margin: 0 auto;
+      padding-bottom: 40px;
+    }
+
+    .hero { padding: 38px 0 28px; }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 38px;
+      color: #3f4658;
+      font-size: 13px;
+      font-weight: 750;
+      letter-spacing: 0.12em;
+    }
+
+    .brand-mark {
+      display: grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      border-radius: 10px;
+      color: #fff;
+      background: var(--ink);
+      font-size: 12px;
+      letter-spacing: 0;
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 750;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 720px;
+      margin: 0;
+      font-size: clamp(34px, 5vw, 52px);
+      line-height: 1.14;
+      letter-spacing: -0.045em;
+    }
+
+    .hero-description {
+      max-width: 650px;
+      margin: 18px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.8;
+    }
+
+    .generator, .metric-card, .workspace, .export-panel {
+      border: 1px solid rgba(224, 228, 238, 0.9);
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 12px 34px rgba(30, 41, 59, 0.045);
+    }
+
+    .generator {
+      padding: 24px;
+      border-radius: 20px;
+    }
+
+    .input-label {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+    }
+
+    input {
+      width: 100%;
+      height: 54px;
+      padding: 0 17px;
+      border: 1px solid #d8ddea;
+      border-radius: 12px;
+      outline: none;
+      color: var(--ink);
+      background: #fbfcfe;
+      transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+    }
+
+    input:focus {
+      border-color: var(--primary);
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(91, 85, 214, 0.11);
+    }
+
+    input::placeholder { color: #9aa2b2; }
+
+    .generate-button {
+      display: inline-flex;
+      min-width: 148px;
+      height: 54px;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 0 22px;
+      border: 0;
+      border-radius: 12px;
+      color: #fff;
+      background: var(--primary);
+      box-shadow: 0 8px 18px rgba(91, 85, 214, 0.22);
+      font-weight: 700;
+      transition: transform 160ms ease, background 160ms ease;
+    }
+
+    .generate-button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      background: var(--primary-dark);
+    }
+
+    .generate-button:disabled { opacity: 0.72; }
+
+    .button-arrow { font-size: 20px; line-height: 1; }
+
+    .spinner {
+      width: 17px;
+      height: 17px;
+      border: 2px solid rgba(255, 255, 255, 0.38);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 700ms linear infinite;
+    }
+
+    .examples {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 13px;
+      color: #8a92a3;
+      font-size: 12px;
+    }
+
+    .example-button {
+      padding: 4px 9px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      color: #616a7d;
+      background: #fff;
+    }
+
+    .example-button:hover:not(:disabled) {
+      border-color: #c9c6f4;
+      color: var(--primary);
+      background: var(--primary-soft);
+    }
+
+    .status {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .status-dot {
+      flex: 0 0 auto;
+      width: 8px;
+      height: 8px;
+      margin-top: 6px;
+      border-radius: 50%;
+      background: #a2aaba;
+    }
+
+    .status.loading .status-dot {
+      background: var(--primary);
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+
+    .status.success { color: var(--success); }
+    .status.success .status-dot { background: var(--success); }
+    .status.error { color: var(--danger); }
+    .status.error .status-dot { background: var(--danger); }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin: 18px 0;
+    }
+
+    .metric-card {
+      min-width: 0;
+      padding: 20px;
+      border-radius: 16px;
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .metric-value-row {
+      display: flex;
+      align-items: baseline;
+      gap: 5px;
+      margin-top: 9px;
+    }
+
+    .metric-value {
+      overflow: hidden;
+      font-size: 29px;
+      font-weight: 760;
+      letter-spacing: -0.035em;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .metric-value.small { font-size: 21px; }
+    .metric-unit { color: #959dad; font-size: 12px; }
+
+    .metric-note {
+      margin-top: 5px;
+      overflow: hidden;
+      color: #9aa2b2;
+      font-size: 11px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .meter {
+      height: 4px;
+      margin-top: 13px;
+      overflow: hidden;
+      border-radius: 99px;
+      background: #eceef4;
+    }
+
+    .meter-fill {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--primary);
+      transition: width 400ms ease;
+    }
+
+    .workspace {
+      overflow: hidden;
+      border-radius: 20px;
+    }
+
+    .workspace-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 22px 28px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .workspace-header .eyebrow { margin-bottom: 5px; }
+
+    .workspace-header h2 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: -0.02em;
+    }
+
+    .file-state {
+      flex: 0 0 auto;
+      padding: 6px 10px;
+      border-radius: 99px;
+      color: #737d90;
+      background: #f1f3f7;
+      font-size: 11px;
+      font-weight: 650;
+    }
+
+    .file-state.ready {
+      color: var(--success);
+      background: #eaf7f3;
+    }
+
+    .preview {
+      min-height: 390px;
+      max-height: 820px;
+      overflow: auto;
+      padding: 34px 38px 44px;
+      color: #303a4d;
+      font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.85;
+    }
+
+    .empty-state {
+      display: flex;
+      min-height: 310px;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      text-align: center;
+    }
+
+    .empty-icon {
+      display: grid;
+      width: 58px;
+      height: 66px;
+      place-items: center;
+      border: 1px solid #dcd9fb;
+      border-radius: 13px;
+      color: var(--primary);
+      background: var(--primary-soft);
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+
+    .empty-state h3 { margin: 18px 0 6px; color: var(--ink); font-size: 17px; }
+    .empty-state p { max-width: 430px; margin: 0; color: #8a93a5; font-size: 13px; }
+
+    .preview h1, .preview h2, .preview h3, .preview h4, .preview h5, .preview h6 {
+      color: var(--ink);
+      line-height: 1.4;
+      letter-spacing: -0.02em;
+    }
+
+    .preview h1 { margin: 0 0 24px; font-size: 30px; }
+    .preview h2 { margin: 34px 0 14px; padding-bottom: 9px; border-bottom: 1px solid var(--line); font-size: 22px; }
+    .preview h3 { margin: 26px 0 10px; font-size: 18px; }
+    .preview p { margin: 11px 0; }
+    .preview ul, .preview ol { margin: 12px 0; padding-left: 25px; }
+    .preview li { margin: 6px 0; padding-left: 3px; }
+    .preview strong { color: #1e293b; font-weight: 720; }
+    .preview a { color: var(--primary); text-decoration: none; }
+    .preview a:hover { text-decoration: underline; }
+
+    .preview blockquote {
+      margin: 18px 0;
+      padding: 10px 16px;
+      border-left: 3px solid #aaa5ec;
+      color: #687287;
+      background: #f8f8fd;
+    }
+
+    .preview code {
+      padding: 2px 5px;
+      border-radius: 5px;
+      color: #b04464;
+      background: #f5f3f7;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.88em;
+    }
+
+    .preview pre {
+      overflow: auto;
+      padding: 18px;
+      border-radius: 12px;
+      color: #e6eaf2;
+      background: #1d2636;
+    }
+
+    .preview pre code { padding: 0; color: inherit; background: transparent; }
+    .preview hr { margin: 28px 0; border: 0; border-top: 1px solid var(--line); }
+
+    .export-panel {
+      margin-top: 16px;
+      padding: 17px 20px;
+      border-radius: 14px;
+    }
+
+    .export-label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .export-path {
+      display: block;
+      overflow-wrap: anywhere;
+      color: #475267;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .footer {
+      padding: 24px 0 0;
+      color: #98a0af;
+      font-size: 11px;
+      text-align: center;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes pulse { 50% { opacity: 0.35; transform: scale(0.8); } }
+
+    @media (max-width: 800px) {
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .preview { padding: 28px; }
+    }
+
+    @media (max-width: 560px) {
+      .shell { width: min(100% - 24px, 1160px); }
+      .hero { padding-top: 24px; }
+      .brand { margin-bottom: 28px; }
+      .generator { padding: 18px; }
+      .input-row { grid-template-columns: 1fr; }
+      .generate-button { width: 100%; }
+      .metrics { gap: 10px; }
+      .metric-card { padding: 16px; }
+      .workspace-header { padding: 18px 20px; }
+      .preview { max-height: none; padding: 24px 20px 32px; }
+      .preview h1 { font-size: 25px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div class="brand"><span class="brand-mark">RA</span><span>REPORT AGENT</span></div>
+      <p class="eyebrow">Competitive Intelligence</p>
+      <h1>把竞品动态，变成清晰判断。</h1>
+      <p class="hero-description">输入竞品名称，智能体团队将完成信息检索、商业分析、研报撰写与质量审核，并输出可追溯的 Markdown 报告。</p>
+    </header>
+
+    <form class="generator" id="report-form">
+      <label class="input-label" for="company-input">竞品名称</label>
+      <div class="input-row">
+        <input id="company-input" name="target_company" value="Dify" maxlength="100" autocomplete="off" placeholder="例如 Dify 或 LangGraph" required>
+        <button class="generate-button" id="generate-button" type="submit">
+          <span class="spinner" id="button-spinner" hidden></span>
+          <span id="button-label">生成研报</span>
+          <span class="button-arrow" id="button-arrow" aria-hidden="true">→</span>
+        </button>
+      </div>
+      <div class="examples">
+        <span>快速示例</span>
+        <button class="example-button" type="button" data-company="Dify">Dify</button>
+        <button class="example-button" type="button" data-company="LangGraph">LangGraph</button>
+      </div>
+      <div class="status" id="status" role="status" aria-live="polite">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span id="status-text">准备就绪，生成过程可能需要几分钟。</span>
+      </div>
+    </form>
+
+    <section class="metrics" aria-label="研报评估指标">
+      <article class="metric-card">
+        <div class="metric-label">威胁指数</div>
+        <div class="metric-value-row"><span class="metric-value" id="threat-value">--</span><span class="metric-unit">/ 10</span></div>
+        <div class="meter" aria-hidden="true"><div class="meter-fill" id="threat-meter"></div></div>
+      </article>
+      <article class="metric-card">
+        <div class="metric-label">修订次数</div>
+        <div class="metric-value-row"><span class="metric-value" id="revision-value">--</span><span class="metric-unit">次</span></div>
+        <div class="metric-note">最多自动重写两次</div>
+      </article>
+      <article class="metric-card">
+        <div class="metric-label">报告字符数</div>
+        <div class="metric-value-row"><span class="metric-value" id="length-value">--</span><span class="metric-unit">字符</span></div>
+        <div class="metric-note">最终 Markdown 内容</div>
+      </article>
+      <article class="metric-card">
+        <div class="metric-label">本地导出</div>
+        <div class="metric-value-row"><span class="metric-value small" id="export-value">待生成</span></div>
+        <div class="metric-note">Markdown 文件保存状态</div>
+      </article>
+    </section>
+
+    <section class="workspace" aria-labelledby="preview-title">
+      <div class="workspace-header">
+        <div><p class="eyebrow">Report Preview</p><h2 id="preview-title">研报预览</h2></div>
+        <span class="file-state" id="file-state">尚未导出</span>
+      </div>
+      <article class="preview" id="preview">
+        <div class="empty-state">
+          <div class="empty-icon" aria-hidden="true">MD</div>
+          <h3>你的竞品研报将在这里呈现</h3>
+          <p>生成完成后自动渲染 Markdown，同时展示威胁指数、修订次数和本地导出路径。</p>
+        </div>
+      </article>
+    </section>
+
+    <section class="export-panel" id="export-panel" hidden>
+      <span class="export-label">本地文件路径</span>
+      <code class="export-path" id="export-path"></code>
+    </section>
+
+    <footer class="footer">Report Agent · 自动生成内容请结合原始来源复核</footer>
+  </main>
+
+  <script>
+    const form = document.getElementById("report-form");
+    const input = document.getElementById("company-input");
+    const button = document.getElementById("generate-button");
+    const spinner = document.getElementById("button-spinner");
+    const buttonLabel = document.getElementById("button-label");
+    const buttonArrow = document.getElementById("button-arrow");
+    const statusBox = document.getElementById("status");
+    const statusText = document.getElementById("status-text");
+    const preview = document.getElementById("preview");
+    const exampleButtons = document.querySelectorAll(".example-button");
+    let generating = false;
+
+    function setStatus(message, type = "") {
+      statusBox.className = `status${type ? ` ${type}` : ""}`;
+      statusText.textContent = message;
+    }
+
+    function setGenerating(active) {
+      generating = active;
+      button.disabled = active;
+      input.readOnly = active;
+      spinner.hidden = !active;
+      buttonArrow.hidden = active;
+      buttonLabel.textContent = active ? "正在生成" : "生成研报";
+      exampleButtons.forEach((item) => { item.disabled = active; });
+    }
+
+    function resetMetrics() {
+      document.getElementById("threat-value").textContent = "--";
+      document.getElementById("threat-meter").style.width = "0";
+      document.getElementById("revision-value").textContent = "--";
+      document.getElementById("length-value").textContent = "--";
+      document.getElementById("export-value").textContent = "生成中";
+      document.getElementById("file-state").textContent = "正在处理";
+      document.getElementById("file-state").classList.remove("ready");
+      document.getElementById("export-panel").hidden = true;
+    }
+
+    function showLoading(company) {
+      preview.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon" aria-hidden="true">MD</div>
+          <h3>正在研究 ${escapeHtml(company)}</h3>
+          <p>智能体正在依次执行检索、分析、撰写和审核，请保持页面打开。</p>
+        </div>`;
+    }
+
+    function showError(message) {
+      preview.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon" aria-hidden="true">!</div>
+          <h3>本次生成未完成</h3>
+          <p>${escapeHtml(message)}</p>
+        </div>`;
+      document.getElementById("export-value").textContent = "未完成";
+      document.getElementById("file-state").textContent = "生成失败";
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (character) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      })[character]);
+    }
+
+    function renderInline(text) {
+      return text
+        .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+        .replace(/`([^`]+)`/g, "<code>$1</code>")
+        .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+        .replace(/__([^_]+)__/g, "<strong>$1</strong>")
+        .replace(/\*([^*]+)\*/g, "<em>$1</em>");
+    }
+
+    function renderMarkdown(markdown) {
+      const lines = escapeHtml(markdown).split(/\r?\n/);
+      const html = [];
+      let listType = null;
+      let inCode = false;
+
+      function closeList() {
+        if (listType) {
+          html.push(`</${listType}>`);
+          listType = null;
+        }
+      }
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (/^```/.test(trimmed)) {
+          closeList();
+          if (inCode) {
+            html.push("</code></pre>");
+            inCode = false;
+          } else {
+            html.push("<pre><code>");
+            inCode = true;
+          }
+          continue;
+        }
+        if (inCode) {
+          html.push(`${line}\n`);
+          continue;
+        }
+        if (!trimmed) {
+          closeList();
+          continue;
+        }
+
+        const heading = line.match(/^(#{1,6})\s+(.+)$/);
+        if (heading) {
+          closeList();
+          const level = heading[1].length;
+          html.push(`<h${level}>${renderInline(heading[2])}</h${level}>`);
+          continue;
+        }
+        if (/^\s*(---|\*\*\*|___)\s*$/.test(line)) {
+          closeList();
+          html.push("<hr>");
+          continue;
+        }
+
+        const bullet = line.match(/^\s*[-*+]\s+(.+)$/);
+        const ordered = line.match(/^\s*\d+[.)]\s+(.+)$/);
+        if (bullet || ordered) {
+          const nextType = bullet ? "ul" : "ol";
+          if (listType !== nextType) {
+            closeList();
+            html.push(`<${nextType}>`);
+            listType = nextType;
+          }
+          html.push(`<li>${renderInline((bullet || ordered)[1])}</li>`);
+          continue;
+        }
+
+        closeList();
+        const quote = line.match(/^>\s?(.*)$/);
+        if (quote) {
+          html.push(`<blockquote>${renderInline(quote[1])}</blockquote>`);
+        } else {
+          html.push(`<p>${renderInline(trimmed)}</p>`);
+        }
+      }
+
+      closeList();
+      if (inCode) html.push("</code></pre>");
+      return html.join("");
+    }
+
+    function showResult(data, company) {
+      const threat = Number(data.threat_index);
+      const report = data.report_markdown;
+      preview.innerHTML = renderMarkdown(report);
+      document.getElementById("preview-title").textContent = `${company} · 研报预览`;
+      document.getElementById("threat-value").textContent = threat;
+      document.getElementById("threat-meter").style.width = `${Math.max(0, Math.min(10, threat)) * 10}%`;
+      document.getElementById("revision-value").textContent = data.revision_count;
+      document.getElementById("length-value").textContent = new Intl.NumberFormat("zh-CN").format(Array.from(report).length);
+      document.getElementById("export-value").textContent = "已导出";
+      document.getElementById("file-state").textContent = "导出完成";
+      document.getElementById("file-state").classList.add("ready");
+
+      if (data.output_file_path) {
+        document.getElementById("export-path").textContent = data.output_file_path;
+        document.getElementById("export-panel").hidden = false;
+      }
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (generating) return;
+
+      const company = input.value.trim();
+      if (!company) {
+        setStatus("请输入竞品名称后再生成。", "error");
+        input.focus();
+        return;
+      }
+
+      setGenerating(true);
+      resetMetrics();
+      showLoading(company);
+      setStatus("正在执行完整研报工作流，这可能需要几分钟，请耐心等待。", "loading");
+
+      try {
+        const response = await fetch("/api/generate_report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ target_company: company })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const detail = Array.isArray(data.detail)
+            ? data.detail.map((item) => item.msg).join("；")
+            : data.detail;
+          throw new Error(detail || `接口返回 ${response.status}`);
+        }
+        if (!data.report_markdown || !data.output_file_path) {
+          throw new Error("接口未返回完整的研报或导出路径");
+        }
+
+        showResult(data, company);
+        const traceId = response.headers.get("X-Trace-ID");
+        setStatus(`研报已生成并成功导出${traceId ? ` · Trace ID: ${traceId}` : ""}`, "success");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "未知错误";
+        showError(message);
+        setStatus(`生成失败：${message}`, "error");
+      } finally {
+        setGenerating(false);
+      }
+    });
+
+    exampleButtons.forEach((item) => {
+      item.addEventListener("click", () => {
+        input.value = item.dataset.company;
+        input.focus();
+      });
+    });
+  </script>
+</body>
+</html>
